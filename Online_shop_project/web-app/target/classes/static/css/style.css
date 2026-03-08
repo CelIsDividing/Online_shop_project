@@ -1,0 +1,119 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    margin: 0;
+    padding: 2rem;
+    color: #eee;
+}
+
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #aaa;
+    margin-bottom: 1.5rem;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.alert-error {
+    background: rgba(200, 80, 80, 0.3);
+    border: 1px solid #c44;
+    color: #ffb3b3;
+}
+
+.login-form label,
+.login-form select,
+.login-form button {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.75rem;
+}
+
+.login-form label {
+    font-weight: 600;
+}
+
+.login-form select {
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #222;
+    color: #eee;
+}
+
+.login-form button {
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #0f3460;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.login-form button:hover {
+    background: #1a4a7a;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #333;
+}
+
+.logout-form button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    background: transparent;
+    color: #aaa;
+    border: 1px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.logout-form button:hover {
+    background: #333;
+    color: #fff;
+}
+
+.profile {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #333;
+}
+
+.profile h2 {
+    margin-top: 0;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.profile p {
+    margin: 0.5rem 0;
+}

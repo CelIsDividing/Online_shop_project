@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="sr">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Admin Panel</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1e293b; }
+
+        /* ---- TOP BAR ---- */
+        .topbar { background: #0f3460; color: #fff; padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; }
+        .topbar h1 { font-size: 1.2rem; letter-spacing: .5px; }
+        .topbar-right { display: flex; align-items: center; gap: 14px; font-size: 0.9rem; opacity: .85; }
+        .btn-logout { background: #dc2626; color: #fff; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+        .btn-logout:hover { background: #b91c1c; }
+
+        /* ---- TABS ---- */
+        .tab-bar { background: #fff; border-bottom: 2px solid #e2e8f0; padding: 0 32px; display: flex; gap: 0; }
+        .tab-btn { padding: 14px 28px; font-size: 0.95rem; font-weight: 600; border: none; background: none; cursor: pointer; color: #64748b; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .15s; }
+        .tab-btn:hover { color: #2563eb; }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+
+        /* ---- LAYOUT ---- */
+        .container { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ---- CARD ---- */
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.07); padding: 24px; margin-bottom: 28px; }
+        .card h2 { font-size: 1.15rem; color: #1e3a5f; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+
+        /* ---- ALERTS ---- */
+        .alert { padding: 12px 18px; border-radius: 8px; margin-bottom: 22px; font-size: 0.9rem; }
+        .alert-success { background: #dcfce7; color: #166534; }
+        .alert-error   { background: #fee2e2; color: #991b1b; }
+
+        /* ---- TABLE ---- */
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        th { background: #f8fafc; font-weight: 700; color: #64748b; text-transform: uppercase; font-size: 0.72rem; letter-spacing: .06em; padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        /* ---- BADGES ---- */
+        .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+        .badge-bronze { background: #fef3c7; color: #92400e; }
+        .badge-silver { background: #e2e8f0; color: #475569; }
+        .badge-gold   { background: #fef9c3; color: #854d0e; }
+        .badge-custom { background: #ede9fe; color: #5b21b6; }
+        .badge-allergen { background: #fee2e2; color: #991b1b; font-size: 0.7rem; padding: 2px 7px; border-radius: 12px; margin: 1px; display: inline-block; }
+
+        /* ---- FORMS ---- */
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 130px; }
+        .form-group.narrow { max-width: 110px; }
+        .form-group.wide { flex: 2; }
+        label.field-label { font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+        input[type=text], input[type=number], textarea, select {
+            padding: 8px 11px; border: 1px solid #cbd5e1; border-radius: 8px;
+            font-size: 0.88rem; width: 100%; background: #fff; color: #1e293b;
+        }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+        textarea { resize: vertical; min-height: 56px; }
+
+        /* ---- ALLERGEN CHECKBOXES ---- */
+        .allergen-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+        .allergen-check { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: #475569; }
+        .allergen-check input { width: auto; accent-color: #2563eb; cursor: pointer; }
+        .allergen-check label { cursor: pointer; font-weight: normal; }
+
+        /* ---- BUTTONS ---- */
+        .btn { padding: 8px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.84rem; font-weight: 600; white-space: nowrap; }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-warning { background: #f59e0b; color: #fff; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-sm { padding: 5px 12px; font-size: 0.78rem; }
+
+        /* ---- INLINE EDIT (details/summary) ---- */
+        details { margin-top: 6px; }
+        summary { cursor: pointer; font-size: 0.82rem; color: #2563eb; user-select: none; }
+        summary:hover { text-decoration: underline; }
+        .edit-panel { margin-top: 10px; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .action-cell { display: flex; flex-direction: column; gap: 4px; }
+
+        /* ---- ANALYTICS ---- */
+        .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+        @media (max-width: 800px) { .analytics-grid { grid-template-columns: 1fr; } }
+        .analytics-grid .card { margin-bottom: 0; }
+        .stat-rank { width: 36px; text-align: center; font-size: 0.85rem; font-weight: 700; }
+        .rank-1 { color: #f59e0b; }
+        .rank-2 { color: #94a3b8; }
+        .rank-3 { color: #b45309; }
+        .bar-cell { min-width: 120px; }
+        .bar-wrap { background: #e2e8f0; border-radius: 99px; height: 8px; overflow: hidden; }
+        .bar-fill  { background: #2563eb; height: 8px; border-radius: 99px; transition: width .4s; }
+        .bar-fill.green  { background: #16a34a; }
+        .bar-fill.purple { background: #7c3aed; }
+        .bar-fill.amber  { background: #d97706; }
+        .revenue-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+        .rev-tab { padding: 5px 14px; border-radius: 20px; border: 1.5px solid #cbd5e1; background: #fff;
+                   font-size: 0.8rem; font-weight: 600; cursor: pointer; color: #475569; transition: all .15s; }
+        .rev-tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+        .revenue-panel { display: none; }
+        .revenue-panel.active { display: block; }
+        .combo-badge { display: inline-flex; align-items: center; gap: 6px; }
+        .combo-sep { color: #94a3b8; font-size: 0.75rem; }
+        .empty-note { color: #94a3b8; font-size: 0.84rem; font-style: italic; padding: 12px 0; }
+        .vip-avatar { width: 30px; height: 30px; border-radius: 50%; background: #dbeafe;
+                      display: inline-flex; align-items: center; justify-content: center;
+                      font-size: 0.75rem; font-weight: 700; color: #1d4ed8; }
+    </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+    <h1>⚙️ Admin Panel</h1>
+    <div class="topbar-right">
+        <span th:text="${userName}"></span>
+        <form action="/logout" method="post">
+            <button class="btn-logout" type="submit">Odjavi se</button>
+        </form>
+    </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar">
+    <button class="tab-btn" th:classappend="${tab == 'loyalty'} ? ' active'" onclick="switchTab('loyalty')">🏅 Loyalty Program</button>
+    <button class="tab-btn" th:classappend="${tab == 'catalog'} ? ' active'" onclick="switchTab('catalog')">📦 Katalog</button>
+    <button class="tab-btn" th:classappend="${tab == 'analytics'} ? ' active'" onclick="switchTab('analytics')">📊 Analitika</button>
+</div>
+
+<div class="container">
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}"   class="alert alert-error"   th:text="${error}"></div>
+
+    <!-- ================================================================
+         TAB: LOYALTY
+    ================================================================= -->
+    <div id="tab-loyalty" class="tab-panel" th:classappend="${tab == 'loyalty'} ? ' active'">
+
+        <!-- Existing tiers -->
+        <div class="card">
+            <h2>🏅 Nivoi loyalty programa</h2>
+            <table>
+                <thead>
+                <tr><th>#</th><th>Naziv</th><th>Popust (%)</th><th>Min. poeni</th><th>Akcije</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="tier : ${tiers}">
+                    <td th:text="${tier.id}"></td>
+                    <td>
+                        <span th:class="'badge ' + (${tier.name == 'BRONZE'} ? 'badge-bronze' : (${tier.name == 'SILVER'} ? 'badge-silver' : (${tier.name == 'GOLD'} ? 'badge-gold' : 'badge-custom')))"
+                              th:text="${tier.name}"></span>
+                    </td>
+                    <td th:text="${#numbers.formatDecimal(tier.discountPercent,1,2)} + ' %'"></td>
+                    <td th:text="${tier.minPoints}"></td>
+                    <td>
+                        <div class="action-cell">
+                            <details>
+                                <summary>Izmeni</summary>
+                                <div class="edit-panel">
+                                    <form th:action="'/admin/loyalty/' + ${tier.id} + '/edit'" method="post">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="field-label">Naziv</label>
+                                                <input type="text" name="name" th:value="${tier.name}" required/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">Popust %</label>
+                                                <input type="number" name="discountPercent" step="0.01" min="0" max="100" th:value="${tier.discountPercent}" required/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">Min. poeni</label>
+                                                <input type="number" name="minPoints" min="0" th:value="${tier.minPoints}" required/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">&nbsp;</label>
+                                                <button class="btn btn-warning" type="submit">Sačuvaj</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </details>
+                            <form th:action="'/admin/loyalty/' + ${tier.id} + '/delete'" method="post"
+                                  onsubmit="return confirm('Obrisati tier?')">
+                                <button class="btn btn-danger btn-sm" type="submit">Obriši</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add new tier -->
+        <div class="card">
+            <h2>➕ Dodaj novi nivo</h2>
+            <form action="/admin/loyalty" method="post">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="field-label">Naziv</label>
+                        <input type="text" name="name" placeholder="npr. PLATINUM" required/>
+                    </div>
+                    <div class="form-group narrow">
+                        <label class="field-label">Popust (%)</label>
+                        <input type="number" name="discountPercent" step="0.01" min="0" max="100" placeholder="15" required/>
+                    </div>
+                    <div class="form-group narrow">
+                        <label class="field-label">Min. poeni</label>
+                        <input type="number" name="minPoints" min="0" placeholder="1000" required/>
+                    </div>
+                    <div class="form-group narrow">
+                        <label class="field-label">&nbsp;</label>
+                        <button class="btn btn-primary" type="submit">Dodaj</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         TAB: CATALOG
+    ================================================================= -->
+    <div id="tab-catalog" class="tab-panel" th:classappend="${tab == 'catalog'} ? ' active'">
+
+        <!-- ---- ALLERGENS ---- -->
+        <div class="card">
+            <h2>⚠️ Alergeni</h2>
+            <table>
+                <thead>
+                <tr><th>#</th><th>Naziv</th><th>Opis</th><th>Akcije</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="a : ${allergens}">
+                    <td th:text="${a.id}"></td>
+                    <td><strong th:text="${a.name}"></strong></td>
+                    <td th:text="${a.description}"></td>
+                    <td>
+                        <div class="action-cell">
+                            <details>
+                                <summary>Izmeni</summary>
+                                <div class="edit-panel">
+                                    <form th:action="'/admin/catalog/allergens/' + ${a.id} + '/edit'" method="post">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="field-label">Naziv</label>
+                                                <input type="text" name="name" th:value="${a.name}" required/>
+                                            </div>
+                                            <div class="form-group wide">
+                                                <label class="field-label">Opis</label>
+                                                <input type="text" name="description" th:value="${a.description}"/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">&nbsp;</label>
+                                                <button class="btn btn-warning" type="submit">Sačuvaj</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </details>
+                            <form th:action="'/admin/catalog/allergens/' + ${a.id} + '/delete'" method="post"
+                                  onsubmit="return confirm('Obrisati alergen?')">
+                                <button class="btn btn-danger btn-sm" type="submit">Obriši</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <!-- Add allergen -->
+            <form action="/admin/catalog/allergens" method="post" style="margin-top:18px;padding-top:16px;border-top:1px solid #e2e8f0;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="field-label">Naziv novog alergena</label>
+                        <input type="text" name="name" placeholder="npr. Kikiriki" required/>
+                    </div>
+                    <div class="form-group wide">
+                        <label class="field-label">Opis</label>
+                        <input type="text" name="description" placeholder="Sadrži kikiriki..."/>
+                    </div>
+                    <div class="form-group narrow">
+                        <label class="field-label">&nbsp;</label>
+                        <button class="btn btn-primary" type="submit">Dodaj</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- ---- PRODUCTS ---- -->
+        <div class="card">
+            <h2>☕ Proizvodi</h2>
+            <table>
+                <thead>
+                <tr><th>#</th><th>Naziv</th><th>Opis</th><th>Cena</th><th>Vel.</th><th>Kcal</th><th>Alergeni</th><th>Akcije</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${products}">
+                    <td th:text="${p.id}"></td>
+                    <td><strong th:text="${p.name}"></strong></td>
+                    <td style="max-width:180px;font-size:0.82rem;color:#64748b;" th:text="${p.description}"></td>
+                    <td th:text="${#numbers.formatDecimal(p.price,1,2)} + ' RSD'"></td>
+                    <td th:text="${p.size != null ? p.size : '—'}"></td>
+                    <td th:text="${p.calories != null ? p.calories : '—'}"></td>
+                    <td>
+                        <span th:each="a : ${p.allergens}" class="badge-allergen" th:text="${a.name}"></span>
+                        <span th:if="${p.allergens == null or #lists.isEmpty(p.allergens)}" style="color:#cbd5e1;font-size:0.78rem;">—</span>
+                    </td>
+                    <td>
+                        <div class="action-cell">
+                            <details>
+                                <summary>Izmeni</summary>
+                                <div class="edit-panel">
+                                    <form th:action="'/admin/catalog/products/' + ${p.id} + '/edit'" method="post">
+                                        <div class="form-row" style="margin-bottom:10px;">
+                                            <div class="form-group">
+                                                <label class="field-label">Naziv</label>
+                                                <input type="text" name="name" th:value="${p.name}" required/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">Cena (RSD)</label>
+                                                <input type="number" name="price" step="0.01" min="0.01" th:value="${p.price}" required/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">Veličina</label>
+                                                <input type="text" name="size" th:value="${p.size}" placeholder="S/M/L"/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">Kalorije</label>
+                                                <input type="number" name="calories" min="0" th:value="${p.calories}"/>
+                                            </div>
+                                        </div>
+                                        <div class="form-row" style="margin-bottom:10px;">
+                                            <div class="form-group wide">
+                                                <label class="field-label">Opis</label>
+                                                <input type="text" name="description" th:value="${p.description}"/>
+                                            </div>
+                                        </div>
+                                        <div style="margin-bottom:10px;">
+                                            <label class="field-label">Alergeni</label>
+                                            <div class="allergen-grid" style="margin-top:5px;">
+                                                <div th:each="a : ${allergens}" class="allergen-check">
+                                                    <input type="checkbox" name="allergenIds"
+                                                           th:id="'ep_' + ${p.id} + '_a' + ${a.id}"
+                                                           th:value="${a.id}"
+                                                           th:checked="${p.hasAllergen(a.id)}"/>
+                                                    <label th:for="'ep_' + ${p.id} + '_a' + ${a.id}" th:text="${a.name}"></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-warning" type="submit">Sačuvaj izmene</button>
+                                    </form>
+                                </div>
+                            </details>
+                            <form th:action="'/admin/catalog/products/' + ${p.id} + '/delete'" method="post"
+                                  onsubmit="return confirm('Obrisati proizvod?')">
+                                <button class="btn btn-danger btn-sm" type="submit">Obriši</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!-- Add product -->
+            <div style="margin-top:18px;padding-top:16px;border-top:1px solid #e2e8f0;">
+                <h3 style="font-size:0.95rem;color:#1e3a5f;margin-bottom:12px;">➕ Dodaj novi proizvod</h3>
+                <form action="/admin/catalog/products" method="post">
+                    <div class="form-row" style="margin-bottom:10px;">
+                        <div class="form-group">
+                            <label class="field-label">Naziv *</label>
+                            <input type="text" name="name" placeholder="npr. Mocha" required/>
+                        </div>
+                        <div class="form-group narrow">
+                            <label class="field-label">Cena (RSD) *</label>
+                            <input type="number" name="price" step="0.01" min="0.01" placeholder="320" required/>
+                        </div>
+                        <div class="form-group narrow">
+                            <label class="field-label">Veličina</label>
+                            <input type="text" name="size" placeholder="M"/>
+                        </div>
+                        <div class="form-group narrow">
+                            <label class="field-label">Kalorije</label>
+                            <input type="number" name="calories" min="0" placeholder="200"/>
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:10px;">
+                        <div class="form-group wide">
+                            <label class="field-label">Opis</label>
+                            <input type="text" name="description" placeholder="Kratki opis proizvoda"/>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label class="field-label">Alergeni</label>
+                        <div class="allergen-grid" style="margin-top:5px;">
+                            <div th:each="a : ${allergens}" class="allergen-check">
+                                <input type="checkbox" name="allergenIds"
+                                       th:id="'np_a' + ${a.id}"
+                                       th:value="${a.id}"/>
+                                <label th:for="'np_a' + ${a.id}" th:text="${a.name}"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Dodaj proizvod</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ---- EXTRAS ---- -->
+        <div class="card">
+            <h2>✨ Dodaci</h2>
+            <table>
+                <thead>
+                <tr><th>#</th><th>Naziv</th><th>Opis</th><th>Cena</th><th>Kcal</th><th>Alergeni</th><th>Akcije</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="e : ${extras}">
+                    <td th:text="${e.id}"></td>
+                    <td><strong th:text="${e.name}"></strong></td>
+                    <td style="max-width:180px;font-size:0.82rem;color:#64748b;" th:text="${e.description}"></td>
+                    <td th:text="${#numbers.formatDecimal(e.price,1,2)} + ' RSD'"></td>
+                    <td th:text="${e.calories != null ? e.calories : '—'}"></td>
+                    <td>
+                        <span th:each="a : ${e.allergens}" class="badge-allergen" th:text="${a.name}"></span>
+                        <span th:if="${e.allergens == null or #lists.isEmpty(e.allergens)}" style="color:#cbd5e1;font-size:0.78rem;">—</span>
+                    </td>
+                    <td>
+                        <div class="action-cell">
+                            <details>
+                                <summary>Izmeni</summary>
+                                <div class="edit-panel">
+                                    <form th:action="'/admin/catalog/extras/' + ${e.id} + '/edit'" method="post">
+                                        <div class="form-row" style="margin-bottom:10px;">
+                                            <div class="form-group">
+                                                <label class="field-label">Naziv</label>
+                                                <input type="text" name="name" th:value="${e.name}" required/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">Cena (RSD)</label>
+                                                <input type="number" name="price" step="0.01" min="0.01" th:value="${e.price}" required/>
+                                            </div>
+                                            <div class="form-group narrow">
+                                                <label class="field-label">Kalorije</label>
+                                                <input type="number" name="calories" min="0" th:value="${e.calories}"/>
+                                            </div>
+                                        </div>
+                                        <div class="form-row" style="margin-bottom:10px;">
+                                            <div class="form-group wide">
+                                                <label class="field-label">Opis</label>
+                                                <input type="text" name="description" th:value="${e.description}"/>
+                                            </div>
+                                        </div>
+                                        <div style="margin-bottom:10px;">
+                                            <label class="field-label">Alergeni</label>
+                                            <div class="allergen-grid" style="margin-top:5px;">
+                                                <div th:each="a : ${allergens}" class="allergen-check">
+                                                    <input type="checkbox" name="allergenIds"
+                                                           th:id="'ee_' + ${e.id} + '_a' + ${a.id}"
+                                                           th:value="${a.id}"
+                                                           th:checked="${e.hasAllergen(a.id)}"/>
+                                                    <label th:for="'ee_' + ${e.id} + '_a' + ${a.id}" th:text="${a.name}"></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-warning" type="submit">Sačuvaj izmene</button>
+                                    </form>
+                                </div>
+                            </details>
+                            <form th:action="'/admin/catalog/extras/' + ${e.id} + '/delete'" method="post"
+                                  onsubmit="return confirm('Obrisati dodatak?')">
+                                <button class="btn btn-danger btn-sm" type="submit">Obriši</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!-- Add extra -->
+            <div style="margin-top:18px;padding-top:16px;border-top:1px solid #e2e8f0;">
+                <h3 style="font-size:0.95rem;color:#1e3a5f;margin-bottom:12px;">➕ Dodaj novi dodatak</h3>
+                <form action="/admin/catalog/extras" method="post">
+                    <div class="form-row" style="margin-bottom:10px;">
+                        <div class="form-group">
+                            <label class="field-label">Naziv *</label>
+                            <input type="text" name="name" placeholder="npr. Karamel sirup" required/>
+                        </div>
+                        <div class="form-group narrow">
+                            <label class="field-label">Cena (RSD) *</label>
+                            <input type="number" name="price" step="0.01" min="0.01" placeholder="60" required/>
+                        </div>
+                        <div class="form-group narrow">
+                            <label class="field-label">Kalorije</label>
+                            <input type="number" name="calories" min="0" placeholder="40"/>
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:10px;">
+                        <div class="form-group wide">
+                            <label class="field-label">Opis</label>
+                            <input type="text" name="description" placeholder="Kratki opis dodatka"/>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label class="field-label">Alergeni</label>
+                        <div class="allergen-grid" style="margin-top:5px;">
+                            <div th:each="a : ${allergens}" class="allergen-check">
+                                <input type="checkbox" name="allergenIds"
+                                       th:id="'ne_a' + ${a.id}"
+                                       th:value="${a.id}"/>
+                                <label th:for="'ne_a' + ${a.id}" th:text="${a.name}"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Dodaj dodatak</button>
+                </form>
+            </div>
+        </div>
+
+    </div><!-- end tab-catalog -->
+
+    <!-- ================================================================
+         TAB: ANALYTICS
+    ================================================================= -->
+    <div id="tab-analytics" class="tab-panel" th:classappend="${tab == 'analytics'} ? ' active'">
+
+        <!-- Row 1: Top Products + Top Extras -->
+        <div class="analytics-grid">
+
+            <!-- TOP PRODUCTS -->
+            <div class="card">
+                <h2>🏆 Najprofitabilniji proizvodi</h2>
+                <div th:if="${topProducts == null or #lists.isEmpty(topProducts)}" class="empty-note">Nema dovoljno podataka.</div>
+                <table th:if="${topProducts != null and not #lists.isEmpty(topProducts)}">
+                    <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th>Proizvod</th>
+                        <th>Prodato</th>
+                        <th>Prihod (RSD)</th>
+                        <th class="bar-cell">Udeo</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="p, iter : ${topProducts}">
+                        <td class="stat-rank"
+                            th:classappend="${iter.index == 0} ? ' rank-1' : (${iter.index == 1} ? ' rank-2' : (${iter.index == 2} ? ' rank-3' : ''))"
+                            th:text="${iter.count}"></td>
+                        <td><strong th:text="${p.productName}"></strong></td>
+                        <td th:text="${p.timesSold}"></td>
+                        <td th:text="${#numbers.formatDecimal(p.totalRevenue, 1, 2)}"></td>
+                        <td class="bar-cell">
+                                <div class="bar-wrap">
+                                    <div class="bar-fill"
+                                         th:style="'width:' + ${#numbers.formatDecimal(p.totalRevenue.doubleValue() / topProducts[0].totalRevenue.doubleValue() * 100, 1, 0)} + '%'"></div>
+                                </div>
+                            </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- TOP EXTRAS -->
+            <div class="card">
+                <h2>✨ Najpopularniji dodaci</h2>
+                <div th:if="${topExtras == null or #lists.isEmpty(topExtras)}" class="empty-note">Nema dovoljno podataka.</div>
+                <table th:if="${topExtras != null and not #lists.isEmpty(topExtras)}">
+                    <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th>Dodatak</th>
+                        <th>Korišćen</th>
+                        <th>Prihod (RSD)</th>
+                        <th class="bar-cell">Udeo</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="e, iter : ${topExtras}">
+                        <td class="stat-rank"
+                            th:classappend="${iter.index == 0} ? ' rank-1' : (${iter.index == 1} ? ' rank-2' : (${iter.index == 2} ? ' rank-3' : ''))"
+                            th:text="${iter.count}"></td>
+                        <td><strong th:text="${e.extraName}"></strong></td>
+                        <td th:text="${e.timesUsed}"></td>
+                        <td th:text="${#numbers.formatDecimal(e.revenue, 1, 2)}"></td>
+                        <td class="bar-cell">
+                                <div class="bar-wrap">
+                                    <div class="bar-fill green"
+                                         th:style="'width:' + ${#numbers.formatDecimal(e.timesUsed * 100.0 / topExtras[0].timesUsed, 1, 0)} + '%'"></div>
+                                </div>
+                            </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div><!-- end row 1 -->
+
+        <!-- Row 2: Revenue + VIP Customers -->
+        <div class="analytics-grid">
+
+            <!-- REVENUE BY PERIOD -->
+            <div class="card">
+                <h2>💰 Prihod po periodu</h2>
+                <div class="revenue-tabs">
+                    <button class="rev-tab active" onclick="switchRevTab('day', this)">Dan</button>
+                    <button class="rev-tab" onclick="switchRevTab('week', this)">Nedelja</button>
+                    <button class="rev-tab" onclick="switchRevTab('month', this)">Mesec</button>
+                </div>
+
+                <!-- Daily -->
+                <div id="rev-day" class="revenue-panel active">
+                    <div th:if="${revenueByDay == null or #lists.isEmpty(revenueByDay)}" class="empty-note">Nema podataka.</div>
+                    <table th:if="${revenueByDay != null and not #lists.isEmpty(revenueByDay)}">
+                        <thead><tr><th>Datum</th><th>Prihod (RSD)</th><th>Transakcije</th></tr></thead>
+                        <tbody>
+                        <tr th:each="r : ${revenueByDay}">
+                            <td th:text="${r.period}"></td>
+                            <td><strong th:text="${#numbers.formatDecimal(r.revenue, 1, 2)}"></strong></td>
+                            <td th:text="${r.transactionCount}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Weekly -->
+                <div id="rev-week" class="revenue-panel">
+                    <div th:if="${revenueByWeek == null or #lists.isEmpty(revenueByWeek)}" class="empty-note">Nema podataka.</div>
+                    <table th:if="${revenueByWeek != null and not #lists.isEmpty(revenueByWeek)}">
+                        <thead><tr><th>Nedelja</th><th>Prihod (RSD)</th><th>Transakcije</th></tr></thead>
+                        <tbody>
+                        <tr th:each="r : ${revenueByWeek}">
+                            <td th:text="${r.period}"></td>
+                            <td><strong th:text="${#numbers.formatDecimal(r.revenue, 1, 2)}"></strong></td>
+                            <td th:text="${r.transactionCount}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Monthly -->
+                <div id="rev-month" class="revenue-panel">
+                    <div th:if="${revenueByMonth == null or #lists.isEmpty(revenueByMonth)}" class="empty-note">Nema podataka.</div>
+                    <table th:if="${revenueByMonth != null and not #lists.isEmpty(revenueByMonth)}">
+                        <thead><tr><th>Mesec</th><th>Prihod (RSD)</th><th>Transakcije</th></tr></thead>
+                        <tbody>
+                        <tr th:each="r : ${revenueByMonth}">
+                            <td th:text="${r.period}"></td>
+                            <td><strong th:text="${#numbers.formatDecimal(r.revenue, 1, 2)}"></strong></td>
+                            <td th:text="${r.transactionCount}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIP CUSTOMERS -->
+            <div class="card">
+                <h2>👑 VIP kupci (Top 10)</h2>
+                <div th:if="${vipCustomers == null or #lists.isEmpty(vipCustomers)}" class="empty-note">Nema dovoljno podataka.</div>
+                <table th:if="${vipCustomers != null and not #lists.isEmpty(vipCustomers)}">
+                    <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th>Kupac</th>
+                        <th>Porudžbine</th>
+                        <th>Ukupno (RSD)</th>
+                        <th class="bar-cell">Udeo</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="c, iter : ${vipCustomers}">
+                        <td class="stat-rank"
+                            th:classappend="${iter.index == 0} ? ' rank-1' : (${iter.index == 1} ? ' rank-2' : (${iter.index == 2} ? ' rank-3' : ''))"
+                            th:text="${iter.count}"></td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span class="vip-avatar" th:text="${#strings.substring(c.userName, 0, 1).toUpperCase()}"></span>
+                                <span th:text="${c.userName}"></span>
+                            </div>
+                        </td>
+                        <td th:text="${c.ordersCount}"></td>
+                        <td><strong th:text="${#numbers.formatDecimal(c.totalSpent, 1, 2)}"></strong></td>
+                        <td class="bar-cell">
+                            <div class="bar-wrap">
+                                <div class="bar-fill amber"
+                                     th:style="'width:' + ${#numbers.formatDecimal(c.totalSpent.doubleValue() / vipCustomers[0].totalSpent.doubleValue() * 100, 1, 0)} + '%'"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div><!-- end row 2 -->
+
+    </div><!-- end tab-analytics -->
+
+</div><!-- end container -->
+
+<script>
+    function switchTab(name) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.currentTarget.classList.add('active');
+        history.replaceState(null, '', '/admin?tab=' + name);
+    }
+
+    function switchRevTab(period, btn) {
+        document.querySelectorAll('.revenue-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.rev-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById('rev-' + period).classList.add('active');
+        btn.classList.add('active');
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: cafeshop-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: cafeShop
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cafeshop-net
+
+  config-server:
+    build: ./config-server
+    container_name: cafeshop-config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///config-repo
+    volumes:
+      - ./config-repo:/config-repo:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - cafeshop-net
+
+  eureka-server:
+    build: ./eureka-server
+    container_name: cafeshop-eureka
+    ports:
+      - "8761:8761"
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - cafeshop-net
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: cafeshop-api-gateway
+    ports:
+      - "8765:8765"
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - cafeshop-net
+
+  user-service:
+    build: ./user-service
+    container_name: cafeshop-user-service
+    ports:
+      - "8003:8003"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      DB_PASSWORD: "${DB_PASSWORD}"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - cafeshop-net
+
+  order-service:
+    build: ./order-service
+    container_name: cafeshop-order-service
+    ports:
+      - "8001:8001"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      DB_PASSWORD: "${DB_PASSWORD}"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - cafeshop-net
+
+  payment-service:
+    build: ./payment-service
+    container_name: cafeshop-payment-service
+    ports:
+      - "8002:8002"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      DB_PASSWORD: "${DB_PASSWORD}"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - cafeshop-net
+
+  catalog-service:
+    build: ./catalog-service
+    container_name: cafeshop-catalog-service
+    ports:
+      - "8004:8004"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      DB_PASSWORD: "${DB_PASSWORD}"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - cafeshop-net
+
+  web-app:
+    build: ./web-app
+    container_name: cafeshop-web-app
+    ports:
+      - "9000:9000"
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      GATEWAY_URL: http://api-gateway:8765
+      USER_SERVICE_URL: http://api-gateway:8765/user-service
+      ORDER_SERVICE_URL: http://api-gateway:8765/order-service
+      PAYMENT_SERVICE_URL: http://api-gateway:8765/payment-service
+      CATALOG_SERVICE_URL: http://api-gateway:8765/catalog-service
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+    networks:
+      - cafeshop-net
+
+networks:
+  cafeshop-net:
+    driver: bridge
+
+volumes:
+  mysql-data:

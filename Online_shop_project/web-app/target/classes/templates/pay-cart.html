@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plaćanje porudžbine</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+        header {
+            background: #0f3460; color: white;
+            padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;
+        }
+        header h1 { font-size: 1.4rem; letter-spacing: 1px; }
+        .container { max-width: 600px; margin: 40px auto; padding: 0 20px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #2563eb; text-decoration: none; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h2 { color: #1e3a5f; margin-bottom: 24px; font-size: 1.6rem; }
+        .card-box { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 20px; }
+        .card-box h3 { color: #1e3a5f; margin-bottom: 16px; font-size: 1.1rem; }
+        .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; color: #334155; }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-row.extra { padding-left: 16px; color: #94a3b8; font-size: 0.88rem; }
+        .total-row { display: flex; justify-content: space-between; padding: 10px 0 0; font-weight: 700; font-size: 1rem; color: #1e3a5f; border-top: 2px solid #e2e8f0; margin-top: 8px; }
+        .discount-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.9rem; color: #16a34a; }
+        .final-row { display: flex; justify-content: space-between; padding: 12px 0 0; font-weight: 800; font-size: 1.2rem; color: #1e3a5f; border-top: 2px solid #1e3a5f; margin-top: 6px; }
+        .loyalty-banner {
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 18px;
+            margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+        }
+        .loyalty-banner .medal { font-size: 2rem; }
+        .loyalty-banner .info { flex: 1; }
+        .loyalty-banner .tier { font-weight: 700; color: #1e40af; font-size: 0.95rem; }
+        .loyalty-banner .detail { font-size: 0.82rem; color: #3b82f6; margin-top: 2px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: #1e3a5f; font-weight: 600; margin-bottom: 8px; }
+        select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: white; color: #334155; }
+        select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+        .no-cards { padding: 16px; background: #fef9c3; border-radius: 8px; color: #854d0e; font-size: 0.9rem; }
+        .pay-btn { width: 100%; background: #dc2626; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; }
+        .pay-btn:hover { background: #b91c1c; }
+        .points-note { font-size: 0.82rem; color: #94a3b8; margin-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>☕ Cafe Shop</h1>
+    <div style="display:flex;align-items:center;gap:16px;">
+        <span th:text="'Zdravo, ' + ${userName}">Zdravo</span>
+        <a th:href="@{/notifications}"
+           style="position:relative;color:white;text-decoration:none;font-size:1.1rem;padding:4px 8px;">
+            🔔
+            <span th:if="${unreadNotifCount > 0}"
+                  th:text="${unreadNotifCount}"
+                  style="position:absolute;top:-4px;right:-6px;background:#ef4444;color:white;border-radius:50%;font-size:.65rem;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-weight:700;"></span>
+        </a>
+    </div>
+</header>
+
+<div class="container">
+    <a href="/cart" class="back-link">← Nazad na korpu</a>
+    <h2>Plaćanje porudžbine</h2>
+
+    <!-- Loyalty banner -->
+    <div class="loyalty-banner">
+        <div class="medal">🏅</div>
+        <div class="info">
+            <div class="tier" th:text="${tierName} + ' nivo – popust ' + ${#numbers.formatDecimal(discountPercent, 1, 2)} + ' %'">BRONZE nivo – popust 0 %</div>
+            <div class="detail">
+                Trenutni poeni: <strong th:text="${loyaltyPoints}">0</strong> &nbsp;|&nbsp;
+                Nakon kupovine dobijate: <strong th:text="'+' + ${earnedPoints}">+0</strong> poena
+            </div>
+        </div>
+    </div>
+
+    <!-- Order summary -->
+    <div class="card-box">
+        <h3>Pregled porudžbine</h3>
+        <div th:each="item : ${cart}">
+            <div class="summary-row">
+                <span th:text="${item.productName}">Proizvod</span>
+                <span th:text="${#numbers.formatDecimal(item.price, 1, 2)} + ' RSD'">0.00 RSD</span>
+            </div>
+            <div th:each="extra : ${item.extras}" class="summary-row extra">
+                <span th:text="'+ ' + ${extra.extraName}">Extra</span>
+                <span th:text="${#numbers.formatDecimal(extra.price, 1, 2)} + ' RSD'">0.00 RSD</span>
+            </div>
+        </div>
+
+        <div class="total-row">
+            <span>Zbir stavki</span>
+            <span th:text="${#numbers.formatDecimal(originalTotal, 1, 2)} + ' RSD'">0.00 RSD</span>
+        </div>
+
+        <div class="discount-row" th:if="${discountPercent != null and discountPercent.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+            <span th:text="'Loyalty popust (' + ${#numbers.formatDecimal(discountPercent, 1, 2)} + ' %)'">Popust</span>
+            <span th:text="'− ' + ${#numbers.formatDecimal(discountAmount, 1, 2)} + ' RSD'">0.00 RSD</span>
+        </div>
+
+        <div class="final-row">
+            <span>Za naplatu</span>
+            <span th:text="${#numbers.formatDecimal(finalTotal, 1, 2)} + ' RSD'">0.00 RSD</span>
+        </div>
+    </div>
+
+    <!-- Card selection -->
+    <div class="card-box">
+        <h3>Odaberite karticu</h3>
+
+        <div th:if="${#lists.isEmpty(cards)}" class="no-cards">
+            Nemate sačuvanih kartica. Molimo dodajte karticu pre plaćanja.
+        </div>
+
+        <form th:if="${!#lists.isEmpty(cards)}" th:action="@{/cart/pay}" method="post">
+            <div class="form-group">
+                <label for="cardId">Kartica</label>
+                <select id="cardId" name="cardId" required>
+                    <option value="" disabled selected>-- Odaberite karticu --</option>
+                    <option th:each="card : ${cards}"
+                            th:value="${card.id}"
+                            th:text="${card.displayName}">Kartica</option>
+                </select>
+            </div>
+            <button type="submit" class="pay-btn"
+                    th:text="'Plati ' + ${#numbers.formatDecimal(finalTotal, 1, 2)} + ' RSD'">
+                Plati
+            </button>
+            <p class="points-note"
+               th:text="'Nakon plaćanja dobijate ' + ${earnedPoints} + ' loyalty poena.'"></p>
+        </form>
+    </div>
+</div>
+</body>
+</html>

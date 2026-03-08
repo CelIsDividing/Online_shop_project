@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Porudžbina #' + ${order.id}">Porudžbina</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+        header {
+            background: #0f3460; color: white;
+            padding: 16px 32px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        header h1 { font-size: 1.4rem; letter-spacing: 1px; }
+        .container { max-width: 900px; margin: 36px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
+        @media(max-width: 720px) { .container { grid-template-columns: 1fr; } }
+        .back-link { display: inline-block; color: #2563eb; text-decoration: none; font-size: 0.88rem; margin-bottom: 14px; }
+        .back-link:hover { text-decoration: underline; }
+        h2 { color: #1e3a5f; font-size: 1.4rem; margin-bottom: 18px; }
+        .alert { padding: 10px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 0.9rem; }
+        .alert-success { background: #dcfce7; color: #166534; }
+        .alert-error   { background: #fee2e2; color: #991b1b; }
+        .card-box {
+            background: white; border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            padding: 20px; margin-bottom: 18px;
+        }
+        .card-box h3 { color: #1e3a5f; font-size: 1rem; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        .badge { padding: 3px 10px; border-radius: 14px; font-size: 0.76rem; font-weight: 700; }
+        .badge-draft { background: #fef9c3; color: #854d0e; }
+        .badge-paid  { background: #dcfce7; color: #166534; }
+        .item-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem;
+        }
+        .item-row:last-child { border-bottom: none; }
+        .extra-row { display: flex; justify-content: space-between; padding: 4px 0 4px 14px; font-size: 0.82rem; color: #94a3b8; }
+        .item-price { font-weight: 600; color: #1e3a5f; white-space: nowrap; margin-left: 10px; }
+        .remove-btn {
+            background: none; border: none; color: #dc2626; cursor: pointer;
+            font-size: 1.1rem; padding: 0 6px; line-height: 1;
+        }
+        .remove-btn:hover { color: #b91c1c; }
+        .total-row {
+            display: flex; justify-content: space-between;
+            padding-top: 12px; font-weight: 700; font-size: 1.05rem;
+            color: #1e3a5f; border-top: 2px solid #e2e8f0; margin-top: 8px;
+        }
+        .empty-items { color: #cbd5e1; font-size: 0.88rem; font-style: italic; padding: 6px 0; }
+        .item-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .allergen-tag { background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+        .calorie-tag { color: #64748b; font-size: 0.72rem; font-style: italic; }
+        .pay-btn {
+            width: 100%; background: #dc2626; color: white; border: none;
+            padding: 13px; border-radius: 8px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; margin-top: 10px;
+        }
+        .pay-btn:hover { background: #b91c1c; }
+        .pay-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-size: 0.85rem; color: #1e3a5f; font-weight: 600; margin-bottom: 5px; }
+        select, .price-display {
+            width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1;
+            border-radius: 8px; font-size: 0.9rem; background: white; color: #334155;
+        }
+        select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+        .extras-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 180px;
+            overflow-y: auto; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px;
+        }
+        .extra-check { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #475569; }
+        .extra-check input[type=checkbox] { cursor: pointer; accent-color: #2563eb; }
+        .add-btn {
+            width: 100%; background: #2563eb; color: white; border: none;
+            padding: 11px; border-radius: 8px; font-size: 0.92rem; font-weight: 600;
+            cursor: pointer; margin-top: 6px;
+        }
+        .add-btn:hover { background: #1d4ed8; }
+        .price-display { background: #f8fafc; color: #1e3a5f; font-weight: 600; border-color: #e2e8f0; }
+    </style>
+    <script>
+        function onProductChange(sel) {
+            const opt = sel.options[sel.selectedIndex];
+            const price = opt.getAttribute('data-price') || '';
+            const name  = opt.getAttribute('data-name')  || '';
+            document.getElementById('productPriceDisplay').value = price ? parseFloat(price).toFixed(2) + ' RSD' : '';
+            document.getElementById('productPrice').value = price;
+            document.getElementById('productName').value  = name;
+        }
+    </script>
+</head>
+<body>
+<header>
+    <h1>☕ Cafe Shop</h1>
+    <div style="display:flex;align-items:center;gap:16px;">
+        <span th:text="'Zdravo, ' + ${userName}">Zdravo</span>
+        <a th:href="@{/notifications}"
+           style="position:relative;color:white;text-decoration:none;font-size:1.1rem;padding:4px 8px;">
+            🔔
+            <span th:if="${unreadNotifCount > 0}"
+                  th:text="${unreadNotifCount}"
+                  style="position:absolute;top:-4px;right:-6px;background:#ef4444;color:white;border-radius:50%;font-size:.65rem;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-weight:700;"></span>
+        </a>
+        <a th:href="@{/orders}" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;">Porudžbine</a>
+    </div>
+</header>
+
+<div style="max-width:900px;margin:24px auto;padding:0 20px;">
+    <a href="/orders" class="back-link">← Nazad na sve porudžbine</a>
+
+    <div th:if="${error}"   class="alert alert-error"   th:text="${error}"></div>
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+        <h2 style="margin:0;" th:text="'Porudžbina #' + ${order.id}">Porudžbina</h2>
+        <span class="badge"
+              th:classappend="${order.draft} ? 'badge-draft' : 'badge-paid'"
+              th:text="${order.draft} ? 'U toku' : 'Plaćeno'">Status</span>
+    </div>
+
+    <div class="container" style="margin:0;padding:0;">
+        <!-- LEFT: current items -->
+        <div>
+            <div class="card-box">
+                <h3>Stavke porudžbine</h3>
+                <div th:if="${order.items == null or #lists.isEmpty(order.items)}" class="empty-items">
+                    Dodajte prve stavke →
+                </div>
+                <div th:each="item : ${order.items}">
+                    <div class="item-row">
+                        <div style="flex:1;">
+                            <div style="font-weight:600;" th:text="${item.productName}">Proizvod</div>
+                            <!-- kalorije i alergeni za proizvod -->
+                            <div th:if="${productMap != null and productMap[item.productId] != null}" class="item-meta">
+                                <span th:if="${productMap[item.productId].calories != null}" class="calorie-tag"
+                                      th:text="${productMap[item.productId].calories} + ' kcal'"></span>
+                                <span th:each="a : ${productMap[item.productId].allergens}" class="allergen-tag" th:text="${a.name}"></span>
+                            </div>
+                            <!-- extras -->
+                            <div th:each="extra : ${item.extras}" style="margin-top:4px;padding-left:12px;border-left:2px solid #e2e8f0;">
+                                <div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#475569;">
+                                    <span th:text="'+ ' + ${extra.extraName}">Extra</span>
+                                    <span th:text="'+' + ${#numbers.formatDecimal(extra.price,1,2)} + ' RSD'" style="margin-left:10px;white-space:nowrap;"></span>
+                                </div>
+                                <div th:if="${extraMap != null and extraMap[extra.extraId] != null}" class="item-meta">
+                                    <span th:if="${extraMap[extra.extraId].calories != null}" class="calorie-tag"
+                                          th:text="${extraMap[extra.extraId].calories} + ' kcal'"></span>
+                                    <span th:each="a : ${extraMap[extra.extraId].allergens}" class="allergen-tag" th:text="${a.name}"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px;flex-shrink:0;margin-left:12px;">
+                            <span class="item-price" th:text="${#numbers.formatDecimal(item.price,1,2)} + ' RSD'">0 RSD</span>
+                            <form th:if="${order.draft}"
+                                  th:action="@{/orders/{oid}/items/{iid}/remove(oid=${order.id},iid=${item.id})}"
+                                  method="post" style="display:inline;">
+                                <button type="submit" class="remove-btn" title="Ukloni">✕</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${order.items != null and not #lists.isEmpty(order.items)}" class="total-row">
+                    <span>Ukupno</span>
+                    <span th:text="${#numbers.formatDecimal(order.totalPrice,1,2)} + ' RSD'">0 RSD</span>
+                </div>
+            </div>
+
+            <div th:if="${order.draft}">
+                <a th:href="@{/orders/{id}/pay(id=${order.id})}"
+                   class="pay-btn"
+                   style="display:block;text-align:center;text-decoration:none;padding:13px;border-radius:8px;font-size:1rem;font-weight:600;"
+                   th:style="${order.items == null or #lists.isEmpty(order.items)} ? 'background:#cbd5e1;pointer-events:none;color:white;' : 'background:#dc2626;color:white;'">
+                    Plati porudžbinu
+                </a>
+            </div>
+        </div>
+
+        <!-- RIGHT: add item form (only for DRAFT) -->
+        <div th:if="${order.draft}">
+            <div class="card-box">
+                <h3>Dodaj proizvod</h3>
+                <form th:action="@{/orders/{id}/items(id=${order.id})}" method="post" id="addItemForm">
+                    <input type="hidden" id="productName"  name="productName" value="">
+                    <input type="hidden" id="productPrice" name="productPrice" value="">
+
+                    <div class="form-group">
+                        <label for="productSelect">Proizvod</label>
+                        <select id="productSelect" name="productId" required onchange="onProductChange(this)">
+                            <option value="" disabled selected>-- Odaberite --</option>
+                            <option th:each="p : ${products}"
+                                    th:value="${p.id}"
+                                    th:attr="data-price=${p.price},data-name=${p.name}"
+                                    th:text="${p.name} + ' (' + ${#numbers.formatDecimal(p.price,1,2)} + ' RSD)'">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cena</label>
+                        <input type="text" class="price-display" id="productPriceDisplay" readonly placeholder="0.00 RSD">
+                    </div>
+
+                    <div class="form-group" th:if="${extras != null and not #lists.isEmpty(extras)}">
+                        <label>Dodaci (opciono)</label>
+                        <div class="extras-grid">
+                            <div th:each="e : ${extras}" class="extra-check">
+                                <input type="checkbox"
+                                       th:id="'extra_' + ${e.id}"
+                                       name="extraIds"
+                                       th:value="${e.id}"
+                                       th:attr="data-name=${e.name}, data-price=${e.price}">
+                                <label th:for="'extra_' + ${e.id}"
+                                       style="font-weight:normal;cursor:pointer;"
+                                       th:text="${e.name} + ' (+' + ${#numbers.formatDecimal(e.price,1,2)} + ' RSD)'">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="extraHiddens"></div>
+                    <button type="submit" class="add-btn" onclick="buildExtraHiddens()">Dodaj u porudžbinu</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function buildExtraHiddens() {
+        const cont = document.getElementById('extraHiddens');
+        cont.innerHTML = '';
+        document.querySelectorAll('input[name="extraIds"]:checked').forEach(cb => {
+            const name  = cb.getAttribute('data-name');
+            const price = cb.getAttribute('data-price');
+            cont.insertAdjacentHTML('beforeend',
+                `<input type="hidden" name="extraNames"  value="${name}">` +
+                `<input type="hidden" name="extraPrices" value="${price}">`
+            );
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="sr">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Početna</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Dobrodošao/la, <span th:text="${user.name}">User</span>!</h1>
+            <form th:action="@{/logout}" method="post" class="logout-form">
+                <button type="submit">Odjavi se</button>
+            </form>
+        </header>
+
+        <section class="profile">
+            <h2>Profil</h2>
+            <p><strong>Ime:</strong> <span th:text="${user.name}">-</span></p>
+            <p><strong>Email:</strong> <span th:text="${user.email}">-</span></p>
+            <div th:if="${user.loyaltyAccount != null}">
+                <p><strong>Loyalty poeni:</strong> <span th:text="${user.loyaltyAccount.points}">0</span></p>
+                <p><strong>Tier:</strong> <span th:text="${user.loyaltyAccount.tier}">BRONZE</span></p>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

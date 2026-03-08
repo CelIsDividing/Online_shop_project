@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="sr">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Notifikacije – Cafe Shop</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4ff; min-height: 100vh; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a3a6b, #2563eb);
+      color: white; padding: 0 32px;
+      display: flex; align-items: center; justify-content: space-between; height: 64px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .header-brand { font-size: 1.25rem; font-weight: 700; letter-spacing: 1px; }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .header-actions a {
+      color: rgba(255,255,255,.85); text-decoration: none; font-size: .9rem;
+      padding: 6px 14px; border-radius: 6px; transition: background .2s;
+    }
+    .header-actions a:hover { background: rgba(255,255,255,.15); }
+    .btn-logout {
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+      color: white; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+      font-size: .9rem; text-decoration: none;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,.25); }
+
+    /* Layout */
+    .container { max-width: 860px; margin: 40px auto; padding: 0 16px; }
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #1e3a5f; margin-bottom: 24px; }
+
+    /* Actions row */
+    .actions-row { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+    .btn-read-all {
+      background: #2563eb; color: white; border: none;
+      padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: .9rem;
+      transition: background .2s;
+    }
+    .btn-read-all:hover { background: #1d4ed8; }
+
+    /* Sections */
+    .section-title {
+      font-size: 1.1rem; font-weight: 700; color: #1e3a5f;
+      margin: 28px 0 12px; padding-bottom: 6px;
+      border-bottom: 2px solid #dbeafe;
+    }
+
+    /* Notification card */
+    .notif-list { display: flex; flex-direction: column; gap: 10px; }
+    .notif-card {
+      background: white; border-radius: 10px; padding: 14px 18px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+      display: flex; align-items: flex-start; gap: 14px;
+      transition: box-shadow .2s;
+    }
+    .notif-card.unread { border-left: 4px solid #2563eb; }
+    .notif-card.read { border-left: 4px solid #e2e8f0; opacity: .8; }
+    .notif-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.1); }
+
+    .notif-icon {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .icon-points   { background: #dbeafe; color: #2563eb; }
+    .icon-tier     { background: #fef3c7; color: #d97706; }
+    .icon-product  { background: #d1fae5; color: #059669; }
+    .icon-extra    { background: #ede9fe; color: #7c3aed; }
+    .icon-loyalty  { background: #fce7f3; color: #db2777; }
+    .icon-global   { background: #f1f5f9; color: #64748b; }
+
+    .notif-body { flex: 1; }
+    .notif-message { font-size: .95rem; color: #1e293b; margin-bottom: 4px; }
+    .notif-time { font-size: .78rem; color: #94a3b8; }
+
+    .btn-read {
+      background: none; border: 1px solid #dbeafe; color: #2563eb;
+      padding: 4px 10px; border-radius: 6px; font-size: .78rem;
+      cursor: pointer; white-space: nowrap; transition: background .2s;
+      text-decoration: none; display: inline-block;
+    }
+    .btn-read:hover { background: #dbeafe; }
+
+    .empty-msg { color: #94a3b8; font-style: italic; font-size: .95rem; text-align: center; padding: 24px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-brand">☕ Cafe Shop</span>
+  <div class="header-actions">
+    <a th:href="@{/orders}">Porudžbine</a>
+    <a th:href="@{/cards}">💳 Kartice</a>
+    <a th:href="@{/notifications}" style="background:rgba(255,255,255,.2);">🔔 Notifikacije</a>
+    <form th:action="@{/logout}" method="post" style="display:inline;">
+      <button type="submit" class="btn-logout">Odjavi se</button>
+    </form>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-title">🔔 Notifikacije</div>
+
+  <!-- Personal -->
+  <div class="section-title">Lične notifikacije</div>
+
+  <div class="actions-row" th:if="${unreadCount > 0}">
+    <form th:action="@{/notifications/read-all}" method="post">
+      <button class="btn-read-all" type="submit">Označi sve kao pročitano</button>
+    </form>
+  </div>
+
+  <div class="notif-list" th:if="${!#lists.isEmpty(personal)}">
+    <div th:each="n : ${personal}"
+         th:classappend="${n.isRead ? 'read' : 'unread'}"
+         class="notif-card">
+
+      <div class="notif-icon"
+           th:classappend="${n.type == 'POINTS_EARNED' ? 'icon-points' :
+                            n.type == 'TIER_UPGRADE'  ? 'icon-tier'   : 'icon-global'}">
+        <span th:text="${n.type == 'POINTS_EARNED' ? '⭐' :
+                         n.type == 'TIER_UPGRADE'  ? '🏆' : '🔔'}"></span>
+      </div>
+
+      <div class="notif-body">
+        <div class="notif-message" th:text="${n.message}"></div>
+        <div class="notif-time"
+             th:text="${#temporals.format(n.createdAt, 'dd.MM.yyyy. HH:mm')}"></div>
+      </div>
+
+      <form th:if="${!n.isRead}" th:action="@{/notifications/{id}/read(id=${n.id})}" method="post">
+        <button class="btn-read" type="submit">✓ Pročitano</button>
+      </form>
+    </div>
+  </div>
+  <div class="empty-msg" th:if="${#lists.isEmpty(personal)}">Nemate ličnih notifikacija.</div>
+
+  <!-- Global -->
+  <div class="section-title">Globalne notifikacije</div>
+
+  <div class="notif-list" th:if="${!#lists.isEmpty(global)}">
+    <div th:each="g : ${global}" class="notif-card" style="border-left-color:#6366f1;">
+      <div class="notif-icon"
+           th:classappend="${g.type == 'NEW_PRODUCT'          ? 'icon-product'  :
+                            g.type == 'NEW_EXTRA'             ? 'icon-extra'    :
+                            g.type == 'NEW_LOYALTY_TIER'      ? 'icon-loyalty'  :
+                            g.type == 'LOYALTY_TIER_DELETED'  ? 'icon-tier'     :
+                            g.type == 'PRODUCT_UPDATED'       ? 'icon-product'  :
+                            g.type == 'EXTRA_UPDATED'         ? 'icon-extra'    : 'icon-global'}">
+        <span th:text="${g.type == 'NEW_PRODUCT'         ? '🍽️' :
+                         g.type == 'NEW_EXTRA'            ? '✨'  :
+                         g.type == 'NEW_LOYALTY_TIER'     ? '🏅'  :
+                         g.type == 'LOYALTY_TIER_DELETED' ? '🗑️' :
+                         g.type == 'PRODUCT_UPDATED'      ? '✏️' :
+                         g.type == 'EXTRA_UPDATED'        ? '✏️' : '📢'}"></span>
+      </div>
+
+      <div class="notif-body">
+        <div class="notif-message" th:text="${g.message}"></div>
+        <div class="notif-time"
+             th:text="${#temporals.format(g.createdAt, 'dd.MM.yyyy. HH:mm')}"></div>
+      </div>
+    </div>
+  </div>
+  <div class="empty-msg" th:if="${#lists.isEmpty(global)}">Nema globalnih notifikacija.</div>
+</div>
+
+</body>
+</html>

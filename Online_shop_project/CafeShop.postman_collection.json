@@ -1,0 +1,1103 @@
+{
+  "info": {
+    "name": "Cafe Shop API",
+    "_postman_id": "cafe-shop-collection-v3",
+    "description": "Postman kolekcija za Cafe Shop mikroservisni sistem.\n\nPokretanje: Servisi moraju biti pokrenuti na http://localhost:8765.\n\nTok: pokrenite '01 – Login', token se automatski čuva i ubacuje u sve naredne zahteve.\n\nPodrazumevani test nalog: ana.jovanovic@example.com / 123\nAdmin nalog: admin@example.com / 123",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",       "value": "http://localhost:8765", "type": "string" },
+    { "key": "token",         "value": "",                      "type": "string" },
+    { "key": "adminToken",    "value": "",                      "type": "string" },
+    { "key": "customerId",    "value": "1",                     "type": "string" },
+    { "key": "adminId",       "value": "2",                     "type": "string" },
+    { "key": "orderId",       "value": "",                      "type": "string" },
+    { "key": "orderItemId",   "value": "",                      "type": "string" },
+    { "key": "cardId",        "value": "1",                     "type": "string" },
+    { "key": "newCardId",     "value": "",                      "type": "string" },
+    { "key": "newTierId",     "value": "",                      "type": "string" },
+    { "key": "newAllergenId", "value": "",                      "type": "string" },
+    { "key": "newProductId",  "value": "",                      "type": "string" },
+    { "key": "newExtraId",    "value": "",                      "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "👤 Customer – Ana Jovanovic",
+      "description": "Kompletan tok kupca. Pokrenite '01 – Login' i token će se sačuvati i automatski koristiti u svim ostalim zahtevima u folderu.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const token = pm.collectionVariables.get('token');",
+              "if (token && token.trim() !== '') {",
+              "    pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + token });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+
+        {
+          "name": "01 – Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('customerId', res.id);",
+                  "pm.collectionVariables.set('token', res.token);",
+                  "pm.test('Login uspešan – status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Vraća ID korisnika', () => pm.expect(res.id).to.be.a('number'));",
+                  "pm.test('Vraća JWT token', () => pm.expect(res.token).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ana.jovanovic@example.com\",\n  \"password\": \"123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "users", "login"]
+            }
+          }
+        },
+
+        {
+          "name": "02 – Izlistaj moje porudžbine",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/user/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "user", "{{customerId}}"]
+            }
+          }
+        },
+
+        {
+          "name": "02b – Pokušaj pristupa porudžbinama drugog korisnika (treba 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pristup odbijen – status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/user/2",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "user", "2"]
+            }
+          }
+        },
+
+        {
+          "name": "03 – Izlistaj moje kartice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cards = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Vraća niz kartica', () => pm.expect(cards).to.be.an('array'));",
+                  "if (cards.length > 0) {",
+                  "    pm.collectionVariables.set('cardId', cards[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payment-service/api/payments/cards/user/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment-service", "api", "payments", "cards", "user", "{{customerId}}"]
+            }
+          }
+        },
+
+        {
+          "name": "04 – Dodaj novu karticu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('newCardId', res.id);",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Kartica kreirana', () => pm.expect(res.id).to.be.a('number'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{customerId}},\n  \"cardHolder\": \"Ana Jovanovic\",\n  \"lastFourDigits\": \"4321\",\n  \"expiryMonth\": 9,\n  \"expiryYear\": 2028\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payment-service/api/payments/cards",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment-service", "api", "payments", "cards"]
+            }
+          }
+        },
+
+        {
+          "name": "05 – Izlistaj kartice (nakon dodavanja)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payment-service/api/payments/cards/user/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment-service", "api", "payments", "cards", "user", "{{customerId}}"]
+            }
+          }
+        },
+
+        {
+          "name": "06 – Započni novu porudžbinu (draft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('orderId', res.id);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status porudžbine je DRAFT', () => pm.expect(res.status).to.eql('DRAFT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/user/{{customerId}}/draft",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "user", "{{customerId}}", "draft"]
+            }
+          }
+        },
+
+        {
+          "name": "07 – Dodaj stavku u porudžbinu (Espresso)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Porudžbina ima stavke', () => pm.expect(res.items).to.have.lengthOf.at.least(1));",
+                  "if (res.items && res.items.length > 0) {",
+                  "    pm.collectionVariables.set('orderItemId', res.items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 1,\n  \"productName\": \"Espresso\",\n  \"price\": 150.00,\n  \"extras\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/{{orderId}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "{{orderId}}", "items"]
+            }
+          }
+        },
+
+        {
+          "name": "08 – Dodaj stavku sa dodatkom (Cappuccino + Sojino mleko)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Porudžbina ima 2 stavke', () => pm.expect(pm.response.json().items).to.have.lengthOf(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 2,\n  \"productName\": \"Cappuccino\",\n  \"price\": 200.00,\n  \"extras\": [\n    {\n      \"extraId\": 2,\n      \"extraName\": \"Sojino mleko\",\n      \"price\": 50.00\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/{{orderId}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "{{orderId}}", "items"]
+            }
+          }
+        },
+
+        {
+          "name": "09 – Pogledaj porudžbinu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Porudžbina je DRAFT', () => pm.expect(res.status).to.eql('DRAFT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "{{orderId}}"]
+            }
+          }
+        },
+
+        {
+          "name": "10 – Ukloni stavku iz porudžbine",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Porudžbina ima 1 stavku', () => pm.expect(pm.response.json().items).to.have.lengthOf(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/{{orderId}}/items/{{orderItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "{{orderId}}", "items", "{{orderItemId}}"]
+            }
+          }
+        },
+
+        {
+          "name": "11 – Plati porudžbinu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Transakcija kreirana', () => pm.expect(pm.response.json().id).to.be.a('number'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{orderId}},\n  \"userId\": {{customerId}},\n  \"cardId\": {{cardId}},\n  \"amount\": 250.00,\n  \"paymentItems\": [\n    {\n      \"orderItemId\": 0,\n      \"description\": \"Cappuccino\",\n      \"amount\": 200.00\n    },\n    {\n      \"orderItemId\": 0,\n      \"description\": \"Cappuccino - Sojino mleko\",\n      \"amount\": 50.00\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payment-service/api/payments/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment-service", "api", "payments", "pay"]
+            }
+          }
+        },
+
+        {
+          "name": "12 – Proveri notifikacije",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Vraća niz notifikacija', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/notifications/user/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "notifications", "user", "{{customerId}}"]
+            }
+          }
+        },
+
+        {
+          "name": "13 – Broj nepročitanih notifikacija",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/notifications/user/{{customerId}}/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "notifications", "user", "{{customerId}}", "unread-count"]
+            }
+          }
+        },
+
+        {
+          "name": "14 – Označi sve notifikacije kao pročitane",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/notifications/user/{{customerId}}/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "notifications", "user", "{{customerId}}", "read-all"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "🔐 Admin – Admin Korisnik",
+      "description": "Admin tok. Pokrenite '01 – Login (Admin)' i adminToken će se sačuvati i koristiti automatski.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const adminToken = pm.collectionVariables.get('adminToken');",
+              "if (adminToken && adminToken.trim() !== '') {",
+              "    pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + adminToken });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+
+        {
+          "name": "01 – Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('adminId', res.id);",
+                  "pm.collectionVariables.set('adminToken', res.token);",
+                  "pm.test('Login uspešan – status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Rola je ADMIN', () => pm.expect(res.role).to.eql('ADMIN'));",
+                  "pm.test('Vraća JWT token', () => pm.expect(res.token).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "users", "login"]
+            }
+          }
+        },
+
+        {
+          "name": "🏅 Loyalty Programi",
+          "item": [
+
+            {
+              "name": "01 – Izlistaj Loyalty Tiers",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/user-service/api/loyalty-tiers",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["user-service", "api", "loyalty-tiers"]
+                }
+              }
+            },
+
+            {
+              "name": "02 – Dodaj novi Loyalty Tier",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "pm.collectionVariables.set('newTierId', res.id);",
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Tier kreiran', () => pm.expect(res.id).to.be.a('number'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"DIAMOND\",\n  \"discountPercent\": 20.00,\n  \"minPoints\": 2000\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/user-service/api/loyalty-tiers",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["user-service", "api", "loyalty-tiers"]
+                }
+              }
+            },
+
+            {
+              "name": "03 – Izmeni Loyalty Tier",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"DIAMOND\",\n  \"discountPercent\": 25.00,\n  \"minPoints\": 2500\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/user-service/api/loyalty-tiers/{{newTierId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["user-service", "api", "loyalty-tiers", "{{newTierId}}"]
+                }
+              }
+            },
+
+            {
+              "name": "04 – Obriši Loyalty Tier",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/user-service/api/loyalty-tiers/{{newTierId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["user-service", "api", "loyalty-tiers", "{{newTierId}}"]
+                }
+              }
+            }
+
+          ]
+        },
+
+        {
+          "name": "📦 Katalog",
+          "item": [
+
+            {
+              "name": "🚨 Alergeni",
+              "item": [
+
+                {
+                  "name": "01 – Izlistaj alergene",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                          "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/allergens",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "allergens"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "02 – Dodaj alergen",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const res = pm.response.json();",
+                          "pm.collectionVariables.set('newAllergenId', res.id);",
+                          "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Soja\",\n  \"description\": \"Sadrži soju i proizvode od soje\"\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/allergens",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "allergens"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "03 – Izmeni alergen",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PUT",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Soja\",\n  \"description\": \"Sadrži soju, sojino mleko i tofu\"\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/allergens/{{newAllergenId}}",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "allergens", "{{newAllergenId}}"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "04 – Obriši alergen",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/allergens/{{newAllergenId}}",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "allergens", "{{newAllergenId}}"]
+                    }
+                  }
+                }
+
+              ]
+            },
+
+            {
+              "name": "☕ Proizvodi",
+              "item": [
+
+                {
+                  "name": "01 – Izlistaj proizvode",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                          "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/products",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "products"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "02 – Dodaj proizvod",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const res = pm.response.json();",
+                          "pm.collectionVariables.set('newProductId', res.id);",
+                          "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Matcha Latte\",\n  \"description\": \"Japanski zeleni čaj sa mlekom\",\n  \"price\": 280.00,\n  \"size\": \"M\",\n  \"calories\": 180,\n  \"allergenIds\": []\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/products",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "products"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "03 – Izmeni proizvod",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PUT",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Matcha Latte\",\n  \"description\": \"Premium japanski zeleni čaj sa bademovim mlekom\",\n  \"price\": 300.00,\n  \"size\": \"M\",\n  \"calories\": 160,\n  \"allergenIds\": []\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/products/{{newProductId}}",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "products", "{{newProductId}}"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "04 – Obriši proizvod",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/products/{{newProductId}}",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "products", "{{newProductId}}"]
+                    }
+                  }
+                }
+
+              ]
+            },
+
+            {
+              "name": "➕ Dodaci (Extras)",
+              "item": [
+
+                {
+                  "name": "01 – Izlistaj dodatke",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                          "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/extras",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "extras"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "02 – Dodaj dodatak",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const res = pm.response.json();",
+                          "pm.collectionVariables.set('newExtraId', res.id);",
+                          "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Karamel sirup\",\n  \"description\": \"Domaći karamel sirup\",\n  \"price\": 40.00,\n  \"calories\": 60,\n  \"allergenIds\": []\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/extras",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "extras"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "03 – Izmeni dodatak",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PUT",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Karamel sirup\",\n  \"description\": \"Premium domaći karamel sirup bez veštačkih boja\",\n  \"price\": 45.00,\n  \"calories\": 55,\n  \"allergenIds\": []\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/extras/{{newExtraId}}",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "extras", "{{newExtraId}}"]
+                    }
+                  }
+                },
+
+                {
+                  "name": "04 – Obriši dodatak",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/catalog-service/api/extras/{{newExtraId}}",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["catalog-service", "api", "extras", "{{newExtraId}}"]
+                    }
+                  }
+                }
+
+              ]
+            }
+
+          ]
+        },
+
+        {
+          "name": "📊 Analitika",
+          "item": [
+
+            {
+              "name": "01 – Najprofitabilniji proizvodi",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/order-service/api/orders/analytics/top-products",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["order-service", "api", "orders", "analytics", "top-products"]
+                }
+              }
+            },
+
+            {
+              "name": "02 – Najpopularniji dodaci",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/order-service/api/orders/analytics/top-extras",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["order-service", "api", "orders", "analytics", "top-extras"]
+                }
+              }
+            },
+
+            {
+              "name": "03 – Prihodi po danu",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/payment-service/api/payments/analytics/revenue?period=day",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["payment-service", "api", "payments", "analytics", "revenue"],
+                  "query": [{ "key": "period", "value": "day" }]
+                }
+              }
+            },
+
+            {
+              "name": "04 – Prihodi po sedmici",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/payment-service/api/payments/analytics/revenue?period=week",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["payment-service", "api", "payments", "analytics", "revenue"],
+                  "query": [{ "key": "period", "value": "week" }]
+                }
+              }
+            },
+
+            {
+              "name": "05 – Prihodi po mesecu",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/payment-service/api/payments/analytics/revenue?period=month",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["payment-service", "api", "payments", "analytics", "revenue"],
+                  "query": [{ "key": "period", "value": "month" }]
+                }
+              }
+            },
+
+            {
+              "name": "06 – VIP Kupci",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Vraća niz', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/payment-service/api/payments/analytics/vip-customers",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["payment-service", "api", "payments", "analytics", "vip-customers"]
+                }
+              }
+            }
+
+          ]
+        }
+
+      ]
+    }
+
+  ]
+}
