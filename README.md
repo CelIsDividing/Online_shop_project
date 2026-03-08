@@ -1,61 +1,61 @@
-# CafeShop - Mikroservisna aplikacija
+# CafeShop - Microservices application
 
-Spring Boot mikroservisna aplikacija za kafić/shop sa Eureka, API Gateway, Feign, Config Server i Docker orkestracijom.
+A Spring Boot microservices application for a café/shop with Eureka, API Gateway, Feign, Config Server, and Docker orchestration.
 
 ---
 
-## Sadržaj
+## Contents
 
-1. [Pregled arhitekture](#pregled-arhitekture)
+1. [Architecture overview](#architecture-overview)
 2. [Eureka Server](#eureka-server)
 3. [API Gateway](#api-gateway)
-4. [Feign – međuservisna komunikacija](#feign--međuservisna-komunikacija)
+4. [Feign – inter-service communication](#feign--inter-service-communication)
 5. [Docker](#docker)
-6. [Kako projekat funkcioniše](#kako-projekat-funkcioniše)
-7. [Pokretanje](#pokretanje)
+6. [How the project works](#how-the-project-works)
+7. [Running the project](#running-the-project)
 
 ---
 
-## Pregled arhitekture
+## Architecture overview
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌──────────────────────────────────────┐
-│   web-app   │────▶│ API Gateway │────▶│ user-service │ order-service │ ...    │
+│   web-app   │───▶│ API Gateway │───▶│ user-service │ order-service │ ...  │
 │  (port 9000)│     │ (port 8765) │     └──────────────────────────────────────┘
 └─────────────┘     └──────┬──────┘                        │
                            │                               │
                            ▼                               ▼
                     ┌─────────────┐                 ┌─────────────┐
-                    │   Eureka    │◀────────────────│  Servisi se │
-                    │  (8761)     │   registruju    │  registruju │
+                    │   Eureka    │◀────────────────│  Services   │
+                    │  (8761)     │   register      │  register   │
                     └─────────────┘                 └─────────────┘
 ```
 
-**Servisi:**
-- **config-server** (8888) – centralna konfiguracija
+**Services:**
+- **config-server** (8888) – centralized configuration
 - **eureka-server** (8761) – service discovery
-- **api-gateway** (8765) – jedinstvena ulazna tačka
-- **user-service** (8003) – korisnici
-- **order-service** (8001) – porudžbine
-- **payment-service** (8002) – plaćanja
-- **catalog-service** (8004) – katalog proizvoda
-- **web-app** (9000) – frontend aplikacija
+- **api-gateway** (8765) – single entry point
+- **user-service** (8003) – users
+- **order-service** (8001) – orders
+- **payment-service** (8002) – payments
+- **catalog-service** (8004) – product catalog
+- **web-app** (9000) – frontend application
 
 ---
 
 ## Eureka Server
 
-### Šta je Eureka?
+### What is Eureka?
 
-**Eureka** je Netflix-ov service discovery server. Drži registar svih mikroservisa – svaki servis se pri startu registruje, a drugi servisi mogu pronaći adrese preko imena umesto hardkodovanih URL-ova.
+**Eureka** is Netflix’s service discovery server. It keeps a registry of all microservices—each service registers itself on startup, and other services can discover addresses by name instead of using hardcoded URLs.
 
-### Zašto se koristi?
+### Why is it used?
 
-- Dinamičko pronalaženje servisa (bez fiksne liste IP:port)
-- Load balancing između instanci
-- Otpornost – kada servis nestane, Eureka ga uklanja iz registra
+- Dynamic service discovery (no fixed list of IP:port)
+- Load balancing between instances
+- Resilience – when a service goes down, Eureka removes it from the registry
 
-### Podešavanja u kodu
+### Code configuration
 
 #### 1. Maven dependency (`pom.xml`)
 
@@ -66,7 +66,7 @@ Spring Boot mikroservisna aplikacija za kafić/shop sa Eureka, API Gateway, Feig
 </dependency>
 ```
 
-#### 2. Glavna aplikacija – Eureka Server
+#### 2. Main application – Eureka Server
 
 ```java
 @EnableEurekaServer
@@ -78,20 +78,20 @@ public class EurekaServerApplication {
 }
 ```
 
-#### 3. Konfiguracija – Eureka Server (`application.properties`)
+#### 3. Configuration – Eureka Server (`application.properties`)
 
 ```properties
 spring.application.name=eureka-server
 server.port=8761
 
-# Server se NE registruje u sebe i NE povlači listu servisa
+# The server does NOT register with itself and does NOT fetch the service registry
 eureka.client.register-with-eureka=false
 eureka.client.fetch-registry=false
 ```
 
-#### 4. Konfiguracija – Eureka Client (npr. user-service)
+#### 4. Configuration – Eureka Client (e.g. user-service)
 
-Svaki mikroservis koji želi da se registruje mora imati:
+Each microservice that wants to register must have:
 
 ```properties
 eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka/
@@ -99,27 +99,27 @@ eureka.instance.prefer-ip-address=true
 eureka.instance.hostname=user-service
 ```
 
-- `defaultZone` – adresa Eureka servera (u Dockeru: `eureka-server`, lokalno: `localhost`)
-- `prefer-ip-address=true` – koristi IP umesto hostname (važno u Dockeru)
-- `hostname` – ime pod kojim se servis vidi u Eureka Dashboard-u
+- `defaultZone` – Eureka server address (in Docker: `eureka-server`, locally: `localhost`)
+- `prefer-ip-address=true` – use IP instead of hostname (important in Docker)
+- `hostname` – the name under which the service appears in the Eureka Dashboard
 
-**Dashboard:** `http://localhost:8761` – pregled registrovanih servisa.
+**Dashboard:** `http://localhost:8761` – view registered services.
 
 ---
 
 ## API Gateway
 
-### Šta je API Gateway?
+### What is an API Gateway?
 
-**API Gateway** je jedinstvena ulazna tačka za sve klijente. Prosleđuje zahteve odgovarajućim mikroservisima na osnovu putanje (path). Omogućava centralizovani log, autentifikaciju, rate limiting itd.
+**API Gateway** is a single entry point for all clients. It forwards requests to the appropriate microservices based on the path. It enables centralized logging, authentication, rate limiting, etc.
 
-### Zašto se koristi?
+### Why is it used?
 
-- Klijent komunicira samo sa jednim URL-om (gateway)
-- Gateway rutira na osnovu `/service-id/path`
-- Skriva interne adrese servisa
+- The client communicates with only one URL (the gateway)
+- The gateway routes based on `/service-id/path`
+- It hides internal service addresses
 
-### Podešavanja u kodu
+### Code configuration
 
 #### 1. Maven dependency (`pom.xml`)
 
@@ -134,55 +134,55 @@ eureka.instance.hostname=user-service
 </dependency>
 ```
 
-#### 2. Konfiguracija (`application.properties`)
+#### 2. Configuration (`application.properties`)
 
 ```properties
 spring.application.name=api-gateway
 server.port=8765
 
-# Eureka – gateway mora biti klijent da bi znao gde su servisi
+# Eureka – the gateway must be a client so it knows where the services are
 eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 eureka.instance.prefer-ip-address=true
 eureka.instance.hostname=localhost
 
-# Dinamičko rutiranje preko Eureka
+# Dynamic routing via Eureka
 spring.cloud.gateway.discovery.locator.enabled=true
 spring.cloud.gateway.discovery.locator.lower-case-service-id=true
 
-# Uklanja prvi segment putanje pri prosleđivanju
-# npr. /user-service/api/users → prosleđuje /api/users
+# Removes the first path segment when forwarding
+# e.g. /user-service/api/users → forwards /api/users
 spring.cloud.gateway.discovery.locator.filters[0].name=StripPrefix
 spring.cloud.gateway.discovery.locator.filters[0].args.parts=1
 ```
 
-#### 3. Format URL-a za poziv servisa
+#### 3. URL format to call services
 
 ```
 http://localhost:8765/{service-id}/{path}
 ```
 
-**Primeri:**
+**Examples:**
 - `http://localhost:8765/user-service/api/users` → user-service
 - `http://localhost:8765/order-service/api/orders` → order-service
 - `http://localhost:8765/payment-service/api/...` → payment-service
 
-Gateway koristi Eureka da pronađe instancu servisa sa datim imenom i prosledi zahtev.
+The gateway uses Eureka to find an instance of the service with the given name and forwards the request.
 
 ---
 
-## Feign – međuservisna komunikacija
+## Feign – inter-service communication
 
-### Šta je Feign?
+### What is Feign?
 
-**Feign** je deklarativni HTTP klijent. Napraviš interface sa HTTP metodama (npr. `@GetMapping`), a Spring kreira implementaciju koja šalje HTTP zahteve. Idealno za pozive između mikroservisa.
+**Feign** is a declarative HTTP client. You create an interface with HTTP methods (e.g. `@GetMapping`), and Spring generates an implementation that sends HTTP requests. It’s ideal for calls between microservices.
 
-### Zašto se koristi?
+### Why is it used?
 
-- Umesto `RestTemplate` ili `WebClient` pišeš samo interface
-- Manje koda, čitljivije
-- Lako radi sa Eureka (može koristiti service-id umesto URL-a)
+- Instead of writing `RestTemplate` or `WebClient`, you only write an interface
+- Less code, more readable
+- Works easily with Eureka (can use service-id instead of a URL)
 
-### Podešavanja u kodu
+### Code configuration
 
 #### 1. Maven dependency (`pom.xml`)
 
@@ -193,7 +193,7 @@ Gateway koristi Eureka da pronađe instancu servisa sa datim imenom i prosledi z
 </dependency>
 ```
 
-#### 2. Uključivanje Feign klijenata u glavnoj aplikaciji
+#### 2. Enabling Feign clients in the main application
 
 ```java
 @SpringBootApplication
@@ -205,9 +205,9 @@ public class OrderServiceApplication {
 }
 ```
 
-#### 3. Definicija Feign klijenta (interface)
+#### 3. Feign client definition (interface)
 
-**UserServiceClient** (u order-service):
+**UserServiceClient** (in order-service):
 
 ```java
 @FeignClient(name = "user-service", url = "${user-service.url:http://localhost:8003}")
@@ -220,7 +220,7 @@ public interface UserServiceClient {
 }
 ```
 
-**OrderServiceClient** (u payment-service):
+**OrderServiceClient** (in payment-service):
 
 ```java
 @FeignClient(name = "order-service", url = "${order-service.url:http://localhost:8001}")
@@ -233,13 +233,13 @@ public interface OrderServiceClient {
 }
 ```
 
-- `name` – identifikator servisa
-- `url` – adresa (iz konfiguracije; fallback na `http://localhost:port`)
-- Metode – standardne Spring MVC anotacije (`@GetMapping`, `@PostMapping`, itd.)
+- `name` – service identifier
+- `url` – address (from configuration; fallback to `http://localhost:port`)
+- Methods – standard Spring MVC annotations (`@GetMapping`, `@PostMapping`, etc.)
 
-#### 4. Konfiguracija URL-a u Dockeru (`config-repo`)
+#### 4. URL configuration in Docker (`config-repo`)
 
-U Dockeru servisi se pozivaju po imenu kontejnera:
+In Docker, services call each other by container name:
 
 **config-repo/order-service.properties:**
 ```properties
@@ -251,7 +251,7 @@ user-service.url=http://user-service:8003
 order-service.url=http://order-service:8001
 ```
 
-#### 5. Korišćenje u servisu
+#### 5. Using it in a service
 
 ```java
 @Service
@@ -262,43 +262,43 @@ public class OrderService {
 
     public Order create(CreateOrderRequest request) {
         try {
-            userServiceClient.getUserById(request.getUserId());  // validacija
+            userServiceClient.getUserById(request.getUserId());  // validation
         } catch (FeignException.NotFound e) {
-            throw new IllegalArgumentException("Korisnik ne postoji.");
+            throw new IllegalArgumentException("User does not exist.");
         } catch (FeignException e) {
-            throw new IllegalStateException("User-service nije dostupan.");
+            throw new IllegalStateException("User-service is not available.");
         }
-        // ... kreiranje porudžbine
+        // ... create order
     }
 }
 ```
 
-**Pozivni lanac u projektu:**
-- **order-service** → **user-service** (provera korisnika pre kreiranja porudžbine)
-- **payment-service** → **order-service** (provera porudžbine pre plaćanja)
+**Call chain in the project:**
+- **order-service** → **user-service** (verify the user before creating an order)
+- **payment-service** → **order-service** (verify the order before payment)
 
 ---
 
 ## Docker
 
-### Šta koristi projekat?
+### What does the project use?
 
-- **Docker Compose** – orkestracija svih servisa u jednoj mreži
-- **Dockerfile** – multi-stage build: Maven build → JRE slika
-- ** bridge mreža** – svi kontejneri komuniciraju preko imena servisa (npr. `user-service`, `mysql`)
+- **Docker Compose** – orchestrates all services in a single network
+- **Dockerfile** – multi-stage build: Maven build → JRE image
+- **bridge network** – all containers communicate via service names (e.g. `user-service`, `mysql`)
 
-### Redosled pokretanja (depends_on)
+### Startup order (depends_on)
 
-1. **mysql** – baza; ostali čekaju healthcheck
-2. **config-server** – konfiguracija; servisi uzimaju DB i Eureka URL
-3. **eureka-server** – registar; ostali se registruju
-4. **api-gateway** – čeka Eureka
-5. **user-service, order-service, payment-service, catalog-service** – čekaju mysql, config-server, eureka
-6. **web-app** – čeka api-gateway i ostale servise
+1. **mysql** – database; others wait for the healthcheck
+2. **config-server** – configuration; services fetch DB and Eureka URLs
+3. **eureka-server** – registry; others register
+4. **api-gateway** – waits for Eureka
+5. **user-service, order-service, payment-service, catalog-service** – wait for mysql, config-server, eureka
+6. **web-app** – waits for api-gateway and other services
 
-### Podešavanja po servisu
+### Per-service settings
 
-**Mikroservisi (npr. user-service):**
+**Microservices (e.g. user-service):**
 ```yaml
 environment:
   SPRING_PROFILES_ACTIVE: docker
@@ -319,7 +319,7 @@ environment:
   EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
 ```
 
-**Web-app** (poziva servise preko gateway-a):
+**Web-app** (calls services through the gateway):
 ```yaml
 environment:
   GATEWAY_URL: http://api-gateway:8765
@@ -328,7 +328,7 @@ environment:
   # ...
 ```
 
-### Dockerfile (tipičan)
+### Dockerfile (typical)
 
 ```dockerfile
 FROM maven:3.9.6-eclipse-temurin-21 AS build
@@ -345,52 +345,52 @@ COPY --from=build /app/target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-- **Stage 1:** Maven build u obrazcu sa JDK 21
-- **Stage 2:** Samo JRE + curl (za healthcheck) + JAR
+- **Stage 1:** Maven build using an image with JDK 21
+- **Stage 2:** JRE only + curl (for healthcheck) + JAR
 
 ---
 
-## Kako projekat funkcioniše
+## How the project works
 
-### Tok zahteva
+### Request flow
 
-1. **Klijent (web-app)** šalje zahtev na `http://api-gateway:8765/user-service/api/users`
-2. **API Gateway** primajući `/user-service/...` traži `user-service` u Eureka i prosleđuje zahtev na `/api/users`
-3. **User-service** obrađuje zahtev i vraća odgovor gateway-u, gateway prosleđuje klijentu
+1. **Client (web-app)** sends a request to `http://api-gateway:8765/user-service/api/users`
+2. **API Gateway**, receiving `/user-service/...`, looks up `user-service` in Eureka and forwards the request to `/api/users`
+3. **User-service** processes the request and returns the response to the gateway; the gateway forwards it to the client
 
-### Međuservisni pozivi (Feign)
+### Inter-service calls (Feign)
 
-- **Order-service** kreće porudžbinu → poziva **user-service** da proveri korisnika
-- **Payment-service** plaća porudžbinu → poziva **order-service** da proveri porudžbinu
+- **Order-service** starts an order → calls **user-service** to validate the user
+- **Payment-service** pays for an order → calls **order-service** to validate the order
 
-Ovi pozivi idu **direktno** (user-service:8003, order-service:8001), jer su svi u istoj Docker mreži. Web-app koristi **gateway**, jer pristupa izvana preko jedne tačke.
+These calls go **directly** (user-service:8003, order-service:8001) because they are all on the same Docker network. The web-app uses the **gateway** because it accesses the system from outside through a single point.
 
 ### Config Server
 
-- Konfiguracija je u `config-repo/` (per-servis fajlovi: `user-service.properties`, `order-service.properties`, itd.)
-- Servisi sa `SPRING_PROFILES_ACTIVE=docker` uzimaju konfiguraciju sa Config Servera
-- U konfiguraciji su npr. DB URL, Eureka URL, Feign URL-i (za Docker imena kontejnera)
+- Configuration is in `config-repo/` (per-service files: `user-service.properties`, `order-service.properties`, etc.)
+- Services with `SPRING_PROFILES_ACTIVE=docker` fetch configuration from the Config Server
+- The configuration contains e.g. DB URL, Eureka URL, Feign URLs (Docker container names)
 
-### Baza podataka
+### Database
 
-- Jedan MySQL (`cafeShop`) – deljen od strane user-service, order-service, payment-service, catalog-service
-- `init-db/init.sql` – inicijalni podaci (tabele, seed podaci)
-- Svaki servis ima svoje tabele; JPA `ddl-auto=update` ažurira šemu
+- One MySQL (`cafeShop`) – shared by user-service, order-service, payment-service, catalog-service
+- `init-db/init.sql` – initial data (tables, seed data)
+- Each service has its own tables; JPA `ddl-auto=update` updates the schema
 
 ---
 
-## Pokretanje
+## Running the project
 
-### Lokalno (bez Docker-a)
+### Local (without Docker)
 
-1. Pokreni **MySQL** (port 3306, baza `cafeShop`, root/123)
-2. Pokreni **config-server** (8888)
-3. Pokreni **eureka-server** (8761)
-4. Pokreni **api-gateway** (8765)
-5. Pokreni mikroservise: **user-service**, **order-service**, **payment-service**, **catalog-service**
-6. Pokreni **web-app** (9000)
+1. Start **MySQL** (port 3306, DB `cafeShop`, root/123)
+2. Start **config-server** (8888)
+3. Start **eureka-server** (8761)
+4. Start **api-gateway** (8765)
+5. Start microservices: **user-service**, **order-service**, **payment-service**, **catalog-service**
+6. Start **web-app** (9000)
 
-U `application.properties` za lokalno korišćenje koriste se `localhost` za Eureka i Config Server.
+In `application.properties` for local usage, `localhost` is used for Eureka and Config Server.
 
 ### Docker Compose
 
@@ -398,13 +398,13 @@ U `application.properties` za lokalno korišćenje koriste se `localhost` za Eur
 docker-compose up -d
 ```
 
-Svi servisi se pokreću u definisanom redosledu. Aplikacija je dostupna na:
+All services start in the defined order. The application is available at:
 
-- **Web aplikacija:** http://localhost:9000
+- **Web application:** http://localhost:9000
 - **Eureka Dashboard:** http://localhost:8761
 - **API Gateway:** http://localhost:8765
 
-**Build i ponovno pokretanje:**
+**Build and restart:**
 ```bash
 docker-compose build --no-cache
 docker-compose up -d
